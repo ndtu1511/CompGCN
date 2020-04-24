@@ -240,6 +240,7 @@ class Runner(object):
 			'args'		: vars(self.p)
 		}
 		torch.save(state, save_path)
+		self.logger.info('Saved model')
 
 	def load_model(self, load_path):
 		"""
@@ -374,7 +375,7 @@ class Runner(object):
 		-------
 		"""
 		self.best_val_mrr, self.best_val, self.best_epoch, val_mrr = 0., {}, 0, 0.
-		save_path = os.path.join('./checkpoints', self.p.name)
+		save_path = os.path.join('/content/drive/My Drive/checkpoints', self.p.name)
 
 		if self.p.restore:
 			self.load_model(save_path)
@@ -385,6 +386,7 @@ class Runner(object):
 			val_results = self.evaluate('valid', epoch)
 
 			if val_results['mrr'] > self.best_val_mrr:
+				self.logger.info('Saving model')
 				self.best_val	   = val_results
 				self.best_val_mrr  = val_results['mrr']
 				self.best_epoch	   = epoch
