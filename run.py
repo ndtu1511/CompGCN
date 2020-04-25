@@ -257,6 +257,7 @@ class Runner(object):
 		state_dict		= state['state_dict']
 		self.best_val		= state['best_val']
 		self.best_val_mrr	= self.best_val['mrr'] 
+		self.p.max_epochs = state['best_epoch']
 
 		self.model.load_state_dict(state_dict)
 		self.optimizer.load_state_dict(state['optimizer'])
