@@ -396,7 +396,15 @@ class Runner(object):
 
 		self.logger.info('Loading best model, Evaluating on Test data')
 		self.load_model(save_path)
-		test_results = self.evaluate('test', epoch)
+		tail_test_results = self.predict(split='test', mode='tail_batch')
+		head_test_results = self.predict(split='test', mode='head_batch')
+		avg_mr = (tail_test_results['mr']+head_test_results['mr'])/2
+		avg_mmr = (tail_test_results['mrr']+head_test_results['mmr'])/2
+		hits_1 = (tail_test_results['hits@0']+head_test_results['hits@0'])/2
+		hits_3 = (tail_test_results['hits@2']+head_test_results['hits@2'])/2
+		hits_10 = (tail_test_results['hits@9']+head_test_results['hits@9'])/2
+		self.logger.info('Test predict: MR: {:.3}, MRR: {:.3}, hit@1: {:.3}, hit@3: {:.3}. hit@10: {:.3}'.format(avg_mr, avg_mmr, hits_1, hits_3, hits_10))
+		
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Parser For Arguments', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
