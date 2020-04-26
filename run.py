@@ -257,7 +257,6 @@ class Runner(object):
 		state_dict		= state['state_dict']
 		self.best_val		= state['best_val']
 		self.best_val_mrr	= self.best_val['mrr'] 
-		self.p.max_epochs = state['best_epoch']
 
 		self.model.load_state_dict(state_dict)
 		self.optimizer.load_state_dict(state['optimizer'])
@@ -381,7 +380,7 @@ class Runner(object):
 		if self.p.restore:
 			self.load_model(save_path)
 			self.logger.info('Successfully Loaded previous model')
-
+		self.logger.info('number of max epochs')
 		for epoch in range(self.p.max_epochs):
 			train_loss  = self.run_epoch(epoch, val_mrr)
 			val_results = self.evaluate('valid', epoch)
