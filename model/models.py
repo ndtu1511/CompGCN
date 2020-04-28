@@ -152,7 +152,7 @@ class CompGCN_TuckER(CompGCNBase):
 		x = x.view(-1, sub_emb.size(1))
 		x = self.bn1(x)
 		x = self.hidden_dropout2(x)
-		x = torch.mm(x, all_ent.tranpose(1,0))
+		x = torch.mm(x, all_ent.transpose(1,0))
 
 		score = torch.sigmoid(x)
 		return score
