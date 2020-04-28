@@ -128,3 +128,31 @@ class CompGCN_ConvE(CompGCNBase):
 
 		score = torch.sigmoid(x)
 		return score
+
+class CompGCN_TuckER(CompGCNBase):
+	def __init__(self, edge_index, edge_type, params=None):
+		super(self.__class__, self).__init__(edge_index, edge_type, params.num_rel, params)
+		self.bn1 = torch.nn.BatchNorm1d(self.p.gcn_dim)
+
+		self.W_ER = torch.nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.p.gcn_dim, self.p.gcn_dim, self.p.gcn_dim)), 
+                                    dtype=torch.float, requires_grad=True))
+		self.drop = torch.nn.Dropout(0)
+		self.drop = torch.nn.Dropout(self.p.hid_drop)
+		self.hidden_dropout1 = torch.nn.Dropout(self.p.hid_drop2)
+		self.hidden_dropout2 = torch.nn.Dropout(self.p.feat_drop)
+
+	def forward(self, sub, rel):
+		sub_emb, rel_emb, all_ent	= self.forward_base(sub, rel, self.drop, self.drop)
+		x = sub_emb.view(-1,1,sub_emb.size(1))
+		W_mat = torch.mm(rel_emb, self.W_ER.view(rel_emb.size(1), -1))
+		W_mat = W_mat.view(-1, sub_emb.size(1), sub_emb.size(1))
+		W_mat = self.hidden_dropout1(W_mat)
+
+		x = torch.bmm(x, W_mat)
+		x = x.view(-1, sub_emb.size(1))
+		x = self.bn1(x)
+		x = self.hidden_dropout2(x)
+		x = torch.mm(x, all_ent.tranpose(1,0))
+
+		score = torch.sigmoid(x)
+		return score
