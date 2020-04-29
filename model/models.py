@@ -136,7 +136,6 @@ class CompGCN_TuckER(CompGCNBase):
 
 		self.W_ER = torch.nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.p.gcn_dim, self.p.gcn_dim, self.p.gcn_dim)), 
                                     dtype=torch.float, requires_grad=True))
-		self.drop = torch.nn.Dropout(0)
 		self.drop = torch.nn.Dropout(self.p.hid_drop)
 		self.hidden_dropout1 = torch.nn.Dropout(self.p.hid_drop2)
 		self.hidden_dropout2 = torch.nn.Dropout(self.p.feat_drop)
