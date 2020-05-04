@@ -348,7 +348,6 @@ class Runner(object):
 		self.model.train()
 		losses = []
 		train_iter = iter(self.data_iter['train'])
-
 		for step, batch in enumerate(train_iter):
 			self.optimizer.zero_grad()
 			sub, rel, obj, label = self.read_batch(batch, 'train')
