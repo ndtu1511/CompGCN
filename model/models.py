@@ -1,6 +1,7 @@
 from helper import *
 from model.compgcn_conv import CompGCNConv
 from model.compgcn_conv_basis import CompGCNConvBasis
+import torch.nn.functional as F
 
 class BaseModel(torch.nn.Module):
 	def __init__(self, params):
@@ -42,6 +43,7 @@ class CompGCNBase(BaseModel):
 	def forward_base(self, sub, rel, drop1, drop2):
 		r	= self.init_rel if self.p.score_func != 'transe' else torch.cat([self.init_rel, -self.init_rel], dim=0)
 		x, r	= self.conv1(self.init_embed, self.edge_index, self.edge_type, rel_embed=r)
+		x =  F.normalize(x, p=2, dim=1)
 		x	= drop1(x)
 		sub_emb	= torch.index_select(x, 0, sub)
 		rel_emb	= torch.index_select(r, 0, rel)
