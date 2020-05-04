@@ -78,6 +78,7 @@ class CompGCNConv(MessagePassing):
 		out	= torch.mm(xj_rel, weight)
 		if gat:
 			gat_coef = self.compute_gat(edge_index, self.num_ent, out,loop_res,mode)
+			assert not torch.isnan(out*gat_coef.view(-1,1)).any()
 			return out*gat_coef.view(-1,1)
 		return out
 
