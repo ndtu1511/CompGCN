@@ -22,7 +22,7 @@ class CompGCNBase(BaseModel):
 		self.p.gcn_dim		= self.p.embed_dim if self.p.gcn_layer == 1 else self.p.gcn_dim
 		self.init_embed		= get_param((self.p.num_ent,   self.p.init_dim))
 		self.device		= self.edge_index.device
-
+		print(num_rel)
 		if self.p.num_bases > 0:
 			self.init_rel  = get_param((self.p.num_bases,   self.p.init_dim))
 		else:
@@ -38,14 +38,11 @@ class CompGCNBase(BaseModel):
 
 		self.register_parameter('bias', Parameter(torch.zeros(self.p.num_ent)))
 
-	def forward_base(self, sub, rel, drop1, drop2):
 
+	def forward_base(self, sub, rel, drop1, drop2):
 		r	= self.init_rel if self.p.score_func != 'transe' else torch.cat([self.init_rel, -self.init_rel], dim=0)
 		x, r	= self.conv1(self.init_embed, self.edge_index, self.edge_type, rel_embed=r)
 		x	= drop1(x)
-		x, r	= self.conv2(x, self.edge_index, self.edge_type, rel_embed=r) 	if self.p.gcn_layer == 2 else (x, r)
-		x	= drop2(x) 							if self.p.gcn_layer == 2 else x
-
 		sub_emb	= torch.index_select(x, 0, sub)
 		rel_emb	= torch.index_select(r, 0, rel)
 
@@ -132,6 +129,7 @@ class CompGCN_ConvE(CompGCNBase):
 class CompGCN_TuckER(CompGCNBase):
 	def __init__(self, edge_index, edge_type, params=None):
 		super(self.__class__, self).__init__(edge_index, edge_type, params.num_rel, params)
+		self.bn0 = torch.nn.BatchNorm1d(self.p.gcn_dim)
 		self.bn1 = torch.nn.BatchNorm1d(self.p.gcn_dim)
 
 		self.W_ER = torch.nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.p.gcn_dim, self.p.gcn_dim, self.p.gcn_dim)), 
@@ -142,6 +140,8 @@ class CompGCN_TuckER(CompGCNBase):
 
 	def forward(self, sub, rel):
 		sub_emb, rel_emb, all_ent	= self.forward_base(sub, rel, self.drop, self.drop)
+		x = self.bn0(sub_emb)
+		x = self.drop(x)
 		x = sub_emb.view(-1,1,sub_emb.size(1))
 		W_mat = torch.mm(rel_emb, self.W_ER.view(rel_emb.size(1), -1))
 		W_mat = W_mat.view(-1, sub_emb.size(1), sub_emb.size(1))

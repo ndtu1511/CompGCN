@@ -71,7 +71,6 @@ class MessagePassing(torch.nn.Module):
 				message_args.append(tmp[edge_index[1]])		# Lookup for tail entities in edges
 			else:
 				message_args.append(kwargs[arg])		# Take things from kwargs
-
 		update_args = [kwargs[arg] for arg in self.update_args]		# Take update args from kwargs
 
 		out = self.message(*message_args)
