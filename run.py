@@ -3,7 +3,7 @@ from data_loader import *
 
 # sys.path.append('./')
 from model.models import *
-
+from find_nan import GuruMeditation
 class Runner(object):
 
 	def load_data(self):
@@ -348,19 +348,20 @@ class Runner(object):
 		self.model.train()
 		losses = []
 		train_iter = iter(self.data_iter['train'])
-		for step, batch in enumerate(train_iter):
-			self.optimizer.zero_grad()
-			sub, rel, obj, label = self.read_batch(batch, 'train')
+		with GuruMeditation():
+			for step, batch in enumerate(train_iter):
+				self.optimizer.zero_grad()
+				sub, rel, obj, label = self.read_batch(batch, 'train')
 
-			pred	= self.model.forward(sub, rel)
-			loss	= self.model.loss(pred, label)
+				pred	= self.model.forward(sub, rel)
+				loss	= self.model.loss(pred, label)
 
-			loss.backward()
-			self.optimizer.step()
-			losses.append(loss.item())
+				loss.backward()
+				self.optimizer.step()
+				losses.append(loss.item())
 
-			if step % 100 == 0:
-				self.logger.info('[E:{}| {}]: Train Loss:{:.5},  Val MRR:{:.5}\t{}'.format(epoch, step, np.mean(losses), self.best_val_mrr, self.p.name))
+				if step % 100 == 0:
+					self.logger.info('[E:{}| {}]: Train Loss:{:.5},  Val MRR:{:.5}\t{}'.format(epoch, step, np.mean(losses), self.best_val_mrr, self.p.name))
 
 		loss = np.mean(losses)
 		self.logger.info('[Epoch:{}]:  Training Loss:{:.4}\n'.format(epoch, loss))

@@ -76,6 +76,7 @@ class CompGCNConv(MessagePassing):
 		rel_emb = torch.index_select(rel_embed, 0, edge_type)
 		xj_rel  = self.rel_transform(x_j, rel_emb)
 		out	= torch.mm(xj_rel, weight)
+		print(out)
 		if gat:
 			gat_coef = self.compute_gat(edge_index, self.num_ent, out,loop_res,mode)
 			return out*gat_coef.view(-1,1)
@@ -100,7 +101,7 @@ class CompGCNConv(MessagePassing):
 
 		cat = torch.cat((x_i, x_j), dim=1)
 		unnorm_coef = cat.mm(weight)
-		coef = torch.clamp(torch.exp(self.leakyrelu(unnorm_coef).squeeze()), min=0.0, max=1.0)
+		coef = torch.exp(self.leakyrelu(unnorm_coef).squeeze())
 		row_sum = scatter_add(coef, row, dim=0, dim_size=num_ent)
 
 		row_sum[row_sum == 0.0] = 1e-12

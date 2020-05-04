@@ -12,7 +12,7 @@ class BaseModel(torch.nn.Module):
 		self.bceloss	= torch.nn.BCELoss()
 
 	def loss(self, pred, true_label):
-		return self.bceloss(pred, true_label)
+		return self.bceloss(pred+1e-12, true_label)
 		
 class CompGCNBase(BaseModel):
 	def __init__(self, edge_index, edge_type, num_rel, params=None):
