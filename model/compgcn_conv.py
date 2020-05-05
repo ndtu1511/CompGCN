@@ -100,7 +100,7 @@ class CompGCNConv(MessagePassing):
 
 		cat = torch.cat((x_i, x_j), dim=1)
 		unnorm_coef = cat.mm(weight)
-		coef = torch.clamp(torch.exp(self.leakyrelu(unnorm_coef).squeeze()), min=0.0, max=1.0)
+		coef = torch.exp(-torch.tanh(unnorm_coef).squeeze())
 		row_sum = scatter_add(coef, row, dim=0, dim_size=num_ent)
 
 		row_sum[row_sum == 0.0] = 1e-12

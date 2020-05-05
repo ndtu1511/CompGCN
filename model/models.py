@@ -142,8 +142,6 @@ class CompGCN_TuckER(CompGCNBase):
 
 	def forward(self, sub, rel):
 		sub_emb, rel_emb, all_ent	= self.forward_base(sub, rel, self.drop, self.drop)
-		x = self.bn0(sub_emb)
-		x = self.drop(x)
 		x = sub_emb.view(-1,1,sub_emb.size(1))
 		W_mat = torch.mm(rel_emb, self.W_ER.view(rel_emb.size(1), -1))
 		W_mat = W_mat.view(-1, sub_emb.size(1), sub_emb.size(1))
