@@ -3,7 +3,6 @@ from data_loader import *
 
 # sys.path.append('./')
 from model.models import *
-from find_nan import GuruMeditation
 class Runner(object):
 
 	def load_data(self):
