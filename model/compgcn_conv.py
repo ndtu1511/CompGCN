@@ -76,7 +76,6 @@ class CompGCNConv(MessagePassing):
 		rel_emb = torch.index_select(rel_embed, 0, edge_type)
 		xj_rel  = self.rel_transform(x_j, rel_emb)
 		out	= torch.mm(xj_rel, weight)
-		print(out)
 		if gat:
 			gat_coef = self.compute_gat(edge_index, self.num_ent, out,loop_res,mode)
 			return out*gat_coef.view(-1,1)
