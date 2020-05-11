@@ -101,7 +101,7 @@ def get_further_neighbors(graph, nbd_size=2):
 
 
 def get_batch_nhop_neighbors_all(batch_sources, node_neighbors, num_rels, device, partial_2hop=True, nbd_size=2):
-    train_edge = batch_sources.numpy()
+    train_edge = batch_sources.cpu().numpy()
     unique_train_entity = list(set(train_edge[0]).union(train_edge[1]))
     batch_source_triples = []
     hop_edge_index, hop_edge_type = [], []
@@ -121,7 +121,7 @@ def get_batch_nhop_neighbors_all(batch_sources, node_neighbors, num_rels, device
             nhop_list = node_neighbors[source][nbd_size]
 
             for i, tup in enumerate(nhop_list):
-                if(partial_2hop and i >= 2):
+                if(partial_2hop and i >= 5):
                     break
                 hop_edge_index.append((nhop_list[i][1][0],source))
                 hop_edge_type.append((nhop_list[i][0][-1]+num_rels, nhop_list[i][0][0]+num_rels))
