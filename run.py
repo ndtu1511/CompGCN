@@ -1,5 +1,7 @@
 from helper import *
 from data_loader import *
+from utils import *
+import pickle
 
 # sys.path.append('./')
 from model.models import *
@@ -100,6 +102,10 @@ class Runner(object):
 		}
 
 		self.edge_index, self.edge_type = self.construct_adj()
+		print("Opening 2hop node neighbors pickle object")
+		with open('2hop.pickle', 'rb') as handle:
+			node_neighbors_2hop = pickle.load(handle)
+		self.edge_index_2hop, self.edge_type_2hop = get_batch_nhop_neighbors_all(self.edge_index, node_neighbors_2hop, self.p.num_rel, self.device)
 
 	def construct_adj(self):
 		"""
@@ -118,7 +124,6 @@ class Runner(object):
 		for sub, rel, obj in self.data['train']:
 			edge_index.append((sub, obj))
 			edge_type.append(rel)
-
 		# Adding inverse edges
 		for sub, rel, obj in self.data['train']:
 			edge_index.append((obj, sub))
@@ -175,10 +180,9 @@ class Runner(object):
 		"""
 		model_name = '{}_{}'.format(model, score_func)
 
-		if   model_name.lower()	== 'compgcn_transe': 	model = CompGCN_TransE(self.edge_index, self.edge_type, params=self.p)
-		elif model_name.lower()	== 'compgcn_distmult': 	model = CompGCN_DistMult(self.edge_index, self.edge_type, params=self.p)
-		elif model_name.lower()	== 'compgcn_conve': 	model = CompGCN_ConvE(self.edge_index, self.edge_type, params=self.p)
-		elif model_name.lower() == 'compgcn_tucker': 	model = CompGCN_TuckER(self.edge_index, self.edge_type, params=self.p)
+		if   model_name.lower()	== 'compgcn_transe': 	model = CompGCN_TransE(self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, params=self.p)
+		elif model_name.lower()	== 'compgcn_distmult': 	model = CompGCN_DistMult(self.edge_index, self.edge_type,self.edge_index_2hop, self.edge_type_2hop, params=self.p)
+		elif model_name.lower()	== 'compgcn_conve': 	model = CompGCN_ConvE(self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, params=self.p)
 		else: raise NotImplementedError
 
 		model.to(self.device)

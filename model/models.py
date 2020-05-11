@@ -15,11 +15,13 @@ class BaseModel(torch.nn.Module):
 		return self.bceloss(pred, true_label)
 		
 class CompGCNBase(BaseModel):
-	def __init__(self, edge_index, edge_type, num_rel, params=None):
+	def __init__(self, edge_index, edge_type, edge_index_2hop, edge_type_2hop, num_rel, params=None):
 		super(CompGCNBase, self).__init__(params)
 
 		self.edge_index		= edge_index
 		self.edge_type		= edge_type
+		self.edge_index_2hop = edge_index_2hop
+		self.edge_type_2hop = edge_type_2hop
 		self.p.gcn_dim		= self.p.embed_dim if self.p.gcn_layer == 1 else self.p.gcn_dim
 		self.init_embed		= get_param((self.p.num_ent,   self.p.init_dim))
 		self.device		= self.edge_index.device
@@ -41,9 +43,9 @@ class CompGCNBase(BaseModel):
 
 	def forward_base(self, sub, rel, drop1, drop2):
 		r	= self.init_rel if self.p.score_func != 'transe' else torch.cat([self.init_rel, -self.init_rel], dim=0)
-		x, r	= self.conv1(self.init_embed, self.edge_index, self.edge_type, rel_embed=r)
+		x, r	= self.conv1(self.init_embed, self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, rel_embed=r)
 		x	= drop1(x)
-		x, r	= self.conv2(x, self.edge_index, self.edge_type, rel_embed=r) 	if self.p.gcn_layer == 2 else (x, r)
+		x, r	= self.conv2(x, self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, rel_embed=r) 	if self.p.gcn_layer == 2 else (x, r)
 		x	= drop2(x) 							if self.p.gcn_layer == 2 else x
 		sub_emb	= torch.index_select(x, 0, sub)
 		rel_emb	= torch.index_select(r, 0, rel)
@@ -52,8 +54,8 @@ class CompGCNBase(BaseModel):
 
 
 class CompGCN_TransE(CompGCNBase):
-	def __init__(self, edge_index, edge_type, params=None):
-		super(self.__class__, self).__init__(edge_index, edge_type, params.num_rel, params)
+	def __init__(self, edge_index, edge_type, edge_index_2hop, edge_type_2hop, params=None):
+		super(self.__class__, self).__init__(edge_index, edge_type, edge_index_2hop, edge_type_2hop, params.num_rel, params)
 		self.drop = torch.nn.Dropout(self.p.hid_drop)
 
 	def forward(self, sub, rel):
@@ -67,8 +69,8 @@ class CompGCN_TransE(CompGCNBase):
 		return score
 
 class CompGCN_DistMult(CompGCNBase):
-	def __init__(self, edge_index, edge_type, params=None):
-		super(self.__class__, self).__init__(edge_index, edge_type, params.num_rel, params)
+	def __init__(self, edge_index, edge_type, edge_index_2hop, edge_type_2hop, params=None):
+		super(self.__class__, self).__init__(edge_index, edge_type, edge_index_2hop, edge_type_2hop, params.num_rel, params)
 		self.drop = torch.nn.Dropout(self.p.hid_drop)
 
 	def forward(self, sub, rel):
@@ -83,8 +85,8 @@ class CompGCN_DistMult(CompGCNBase):
 		return score
 
 class CompGCN_ConvE(CompGCNBase):
-	def __init__(self, edge_index, edge_type, params=None):
-		super(self.__class__, self).__init__(edge_index, edge_type, params.num_rel, params)
+	def __init__(self, edge_index, edge_type, edge_index_2hop, edge_type_2hop, params=None):
+		super(self.__class__, self).__init__(edge_index, edge_type, edge_index_2hop, edge_type_2hop, params.num_rel, params)
 
 		self.bn0		= torch.nn.BatchNorm2d(1)
 		self.bn1		= torch.nn.BatchNorm2d(self.p.num_filt)
@@ -124,34 +126,6 @@ class CompGCN_ConvE(CompGCNBase):
 
 		x = torch.mm(x, all_ent.transpose(1,0))
 		x += self.bias.expand_as(x)
-
-		score = torch.sigmoid(x)
-		return score
-
-class CompGCN_TuckER(CompGCNBase):
-	def __init__(self, edge_index, edge_type, params=None):
-		super(self.__class__, self).__init__(edge_index, edge_type, params.num_rel, params)
-		self.bn0 = torch.nn.BatchNorm1d(self.p.gcn_dim)
-		self.bn1 = torch.nn.BatchNorm1d(self.p.gcn_dim)
-
-		self.W_ER = torch.nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.p.gcn_dim, self.p.gcn_dim, self.p.gcn_dim)), 
-                                    dtype=torch.float, requires_grad=True))
-		self.drop = torch.nn.Dropout(self.p.hid_drop)
-		self.hidden_dropout1 = torch.nn.Dropout(self.p.hid_drop2)
-		self.hidden_dropout2 = torch.nn.Dropout(self.p.feat_drop)
-
-	def forward(self, sub, rel):
-		sub_emb, rel_emb, all_ent	= self.forward_base(sub, rel, self.drop, self.drop)
-		x = sub_emb.view(-1,1,sub_emb.size(1))
-		W_mat = torch.mm(rel_emb, self.W_ER.view(rel_emb.size(1), -1))
-		W_mat = W_mat.view(-1, sub_emb.size(1), sub_emb.size(1))
-		W_mat = self.hidden_dropout1(W_mat)
-
-		x = torch.bmm(x, W_mat)
-		x = x.view(-1, sub_emb.size(1))
-		x = self.bn1(x)
-		x = self.hidden_dropout2(x)
-		x = torch.mm(x, all_ent.transpose(1,0))
 
 		score = torch.sigmoid(x)
 		return score

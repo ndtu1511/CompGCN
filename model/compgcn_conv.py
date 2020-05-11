@@ -28,19 +28,23 @@ class CompGCNConv(MessagePassing):
 
 		if self.p.bias: self.register_parameter('bias', Parameter(torch.zeros(out_channels)))
 
-	def forward(self, x, edge_index, edge_type, rel_embed): 
+	def forward(self, x, edge_index, edge_type, edge_index_2hop, edge_type_2hop, rel_embed): 
 		if self.device is None:
 			self.device = edge_index.device
 
 		rel_embed = torch.cat([rel_embed, self.loop_rel], dim=0)
 		num_edges = edge_index.size(1) // 2
+		num_edges_2hop = edge_index_2hop.size(1) // 2
 		self.num_ent   = x.size(0)
 
-		self.in_index, self.out_index = edge_index[:, :num_edges], edge_index[:, num_edges:]
+		in_index, out_index = edge_index[:, :num_edges], edge_index[:, num_edges:]
 		self.in_type,  self.out_type  = edge_type[:num_edges], 	 edge_type [num_edges:]
+		in_index_2hop, out_index_2hop = edge_index_2hop[:, :num_edges_2hop], edge_index_2hop[:, num_edges_2hop:]
+		self.in_type_2hop,  self.out_type_2hop  = edge_type_2hop[:num_edges_2hop,:], 	 edge_type_2hop [num_edges_2hop:,:]
 		self.loop_index  = torch.stack([torch.arange(self.num_ent), torch.arange(self.num_ent)]).to(self.device)
 		self.loop_type   = torch.full((self.num_ent,), rel_embed.size(0)-1, dtype=torch.long).to(self.device)
-
+		self.in_index_all = torch.cat([in_index, in_index_2hop], dim=1)
+		self.out_index_all = torch.cat([out_index, out_index_2hop], dim=1)
 		# self.in_norm     = self.compute_norm(self.in_index,  num_ent)
 		# self.out_norm    = self.compute_norm(self.out_index, num_ent)
 		
@@ -50,11 +54,11 @@ class CompGCNConv(MessagePassing):
 		# 	   						 rel_embed=rel_embed, edge_norm=self.in_norm, 	mode='in')
 		# out_res		= self.propagate('add', self.out_index,  x=x, edge_type=self.out_type,  
 		# 							 rel_embed=rel_embed, edge_norm=self.out_norm,	mode='out')
-		loop_res	= self.propagate('add', self.loop_index, x=x, edge_type=self.loop_type,
+		loop_res	= self.propagate('add', self.loop_index, x=x, edge_type=self.loop_type, edge_type_2hop=None,
 									 rel_embed=rel_embed, gat=False, mode='loop', loop_res = None)
-		in_res		= self.propagate('add', self.in_index,   x=x, edge_type=self.in_type,
+		in_res		= self.propagate('add', self.in_index_all,   x=x, edge_type=self.in_type, edge_type_2hop=self.in_type_2hop,
 			   						 rel_embed=rel_embed, gat=True, mode='in', loop_res = loop_res)
-		out_res		= self.propagate('add', self.out_index,  x=x, edge_type=self.out_type,  
+		out_res		= self.propagate('add', self.out_index_all,  x=x, edge_type=self.out_type, edge_type_2hop=self.out_type_2hop,
 									 rel_embed=rel_embed, gat=True,	mode='out', loop_res = loop_res)
 		out		= self.drop(in_res)*(1/3) + self.drop(out_res)*(1/3) + loop_res*(1/3)
 
@@ -71,9 +75,12 @@ class CompGCNConv(MessagePassing):
 
 		return trans_embed
 
-	def message(self, x_j, edge_type, rel_embed, gat, mode, loop_res, edge_index):
+	def message(self, x_j, edge_type, edge_type_2hop, rel_embed, gat, mode, loop_res, edge_index):
 		weight 	= getattr(self, 'w_{}'.format(mode))
 		rel_emb = torch.index_select(rel_embed, 0, edge_type)
+		if edge_type_2hop!=None:
+			rel_emb_2hop = torch.index_select(rel_embed, 0, edge_type_2hop[:, 0]) + torch.index_select(rel_embed, 0, edge_type_2hop[:, 1])
+			rel_emb = torch.cat([rel_emb, rel_emb_2hop], dim=0)
 		xj_rel  = self.rel_transform(x_j, rel_emb)
 		out	= torch.mm(xj_rel, weight)
 		if gat:
