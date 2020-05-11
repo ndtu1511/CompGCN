@@ -112,16 +112,15 @@ def get_batch_nhop_neighbors_all(batch_sources, node_neighbors, num_rels, device
             nhop_list = node_neighbors[source][nbd_size]
 
             for i, tup in enumerate(nhop_list):
-                if(partial_2hop and i >= 2):
+                if(partial_2hop and i >= 10):
                     break
                 hop_edge_index.append((source, nhop_list[i][1][0]))
                 hop_edge_type.append((nhop_list[i][0][-1], nhop_list[i][0][0]))
     for source in unique_train_entity:
         if source in node_neighbors.keys():
             nhop_list = node_neighbors[source][nbd_size]
-
             for i, tup in enumerate(nhop_list):
-                if(partial_2hop and i >= 5):
+                if(partial_2hop and i >= 10):
                     break
                 hop_edge_index.append((nhop_list[i][1][0],source))
                 hop_edge_type.append((nhop_list[i][0][-1]+num_rels, nhop_list[i][0][0]+num_rels))
