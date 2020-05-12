@@ -8,8 +8,8 @@ class BaseModel(torch.nn.Module):
 		super(BaseModel, self).__init__()
 
 		self.p		= params
-		# self.act	= torch.tanh
-		self.act	= F.elu
+		self.act	= torch.tanh
+		# self.act	= F.elu
 		self.bceloss	= torch.nn.BCELoss()
 
 	def loss(self, pred, true_label):
@@ -26,7 +26,6 @@ class CompGCNBase(BaseModel):
 		self.p.gcn_dim		= self.p.embed_dim if self.p.gcn_layer == 1 else self.p.gcn_dim
 		self.init_embed		= get_param((self.p.num_ent,   self.p.init_dim))
 		self.device		= self.edge_index.device
-		self.bn			= torch.nn.BatchNorm1d(self.p.gcn_dim)
 		if self.p.num_bases > 0:
 			self.init_rel  = get_param((self.p.num_bases,   self.p.init_dim))
 		else:
@@ -46,7 +45,6 @@ class CompGCNBase(BaseModel):
 	def forward_base(self, sub, rel, drop1, drop2):
 		r	= self.init_rel if self.p.score_func != 'transe' else torch.cat([self.init_rel, -self.init_rel], dim=0)
 		x, r	= self.conv1(self.init_embed, self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, rel_embed=r)
-		# x = self.bn(x)
 		# x	= drop1(x)
 		x, r	= self.conv2(x, self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, rel_embed=r) 	if self.p.gcn_layer == 2 else (x, r)
 		x	= drop2(x) 							if self.p.gcn_layer == 2 else x
@@ -145,7 +143,7 @@ class CompGCN_Tucker(CompGCNBase):
 		self.feature_drop	= torch.nn.Dropout(self.p.feat_drop)
 
 		self.W = torch.nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.p.gcn_dim, self.p.gcn_dim, self.p.gcn_dim)), 
-                                    dtype=torch.float, device="cpu", requires_grad=True))
+                                    dtype=torch.float, device="cuda", requires_grad=True))
 
 
 	def forward(self, sub, rel):

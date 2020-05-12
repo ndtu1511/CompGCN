@@ -63,7 +63,7 @@ class CompGCNConv(MessagePassing):
 		out		= self.drop(in_res)*(1/3) + self.drop(out_res)*(1/3) + loop_res*(1/3)
 
 		if self.p.bias: out = out + self.bias
-		# out = self.bn(out)
+		out = self.bn(out)
 
 		return self.act(out), torch.matmul(rel_embed, self.w_rel)[:-1]		# Ignoring the self loop inserted
 
@@ -107,7 +107,7 @@ class CompGCNConv(MessagePassing):
 
 		cat = torch.cat((x_i, x_j), dim=1)
 		unnorm_coef = cat.mm(weight)
-		coef = torch.exp(-self.leakyrelu(unnorm_coef).squeeze())
+		coef = torch.exp(-torch.tanh(unnorm_coef).squeeze())
 
 		row_sum = scatter_add(coef, row, dim=0, dim_size=num_ent)
 
