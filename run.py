@@ -183,6 +183,7 @@ class Runner(object):
 		if   model_name.lower()	== 'compgcn_transe': 	model = CompGCN_TransE(self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, params=self.p)
 		elif model_name.lower()	== 'compgcn_distmult': 	model = CompGCN_DistMult(self.edge_index, self.edge_type,self.edge_index_2hop, self.edge_type_2hop, params=self.p)
 		elif model_name.lower()	== 'compgcn_conve': 	model = CompGCN_ConvE(self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, params=self.p)
+		elif model_name.lower()	== 'compgcn_tucker': 	model = CompGCN_Tucker(self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, params=self.p)
 		else: raise NotImplementedError
 
 		model.to(self.device)
@@ -437,8 +438,8 @@ if __name__ == '__main__':
 	parser.add_argument('-hid_drop',  	dest='hid_drop', 	default=0.3,  	type=float,	help='Dropout after GCN')
 
 	# ConvE specific hyperparameters
-	parser.add_argument('-hid_drop2',  	dest='hid_drop2', 	default=0.3,  	type=float,	help='ConvE: Hidden dropout')
-	parser.add_argument('-feat_drop', 	dest='feat_drop', 	default=0.3,  	type=float,	help='ConvE: Feature Dropout')
+	parser.add_argument('-hid_drop2',  	dest='hid_drop2', 	default=0.4,  	type=float,	help='ConvE: Hidden dropout')
+	parser.add_argument('-feat_drop', 	dest='feat_drop', 	default=0.4,  	type=float,	help='ConvE: Feature Dropout')
 	parser.add_argument('-k_w',	  	dest='k_w', 		default=10,   	type=int, 	help='ConvE: k_w')
 	parser.add_argument('-k_h',	  	dest='k_h', 		default=20,   	type=int, 	help='ConvE: k_h')
 	parser.add_argument('-num_filt',  	dest='num_filt', 	default=200,   	type=int, 	help='ConvE: Number of filters in convolution')

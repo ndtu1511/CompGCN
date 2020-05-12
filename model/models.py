@@ -46,8 +46,8 @@ class CompGCNBase(BaseModel):
 	def forward_base(self, sub, rel, drop1, drop2):
 		r	= self.init_rel if self.p.score_func != 'transe' else torch.cat([self.init_rel, -self.init_rel], dim=0)
 		x, r	= self.conv1(self.init_embed, self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, rel_embed=r)
-		x = self.bn(x)
-		x	= drop1(x)
+		# x = self.bn(x)
+		# x	= drop1(x)
 		x, r	= self.conv2(x, self.edge_index, self.edge_type, self.edge_index_2hop, self.edge_type_2hop, rel_embed=r) 	if self.p.gcn_layer == 2 else (x, r)
 		x	= drop2(x) 							if self.p.gcn_layer == 2 else x
 		sub_emb	= torch.index_select(x, 0, sub)
@@ -126,6 +126,42 @@ class CompGCN_ConvE(CompGCNBase):
 		x				= self.hidden_drop2(x)
 		x				= self.bn2(x)
 		x				= F.relu(x)
+
+		x = torch.mm(x, all_ent.transpose(1,0))
+		x += self.bias.expand_as(x)
+
+		score = torch.sigmoid(x)
+		return score
+
+class CompGCN_Tucker(CompGCNBase):
+	def __init__(self, edge_index, edge_type, edge_index_2hop, edge_type_2hop, params=None):
+		super(self.__class__, self).__init__(edge_index, edge_type, edge_index_2hop, edge_type_2hop, params.num_rel, params)
+
+		self.bn1		= torch.nn.BatchNorm1d(self.p.gcn_dim)
+		self.bn2		= torch.nn.BatchNorm1d(self.p.gcn_dim)
+		
+		self.input_dropout	= torch.nn.Dropout(self.p.hid_drop)
+		self.hidden_dropout1	= torch.nn.Dropout(self.p.hid_drop2)
+		self.feature_drop	= torch.nn.Dropout(self.p.feat_drop)
+
+		self.W = torch.nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (self.p.gcn_dim, self.p.gcn_dim, self.p.gcn_dim)), 
+                                    dtype=torch.float, device="cpu", requires_grad=True))
+
+
+	def forward(self, sub, rel):
+		sub_emb, rel_emb, all_ent	= self.forward_base(sub, rel, self.input_dropout, self.feature_drop)
+		x = self.bn1(sub_emb)
+		x = self.input_dropout(x)
+		x = x.view(-1, 1, sub_emb.size(1))
+		
+		W_mat = torch.mm(rel_emb, self.W.view(rel_emb.size(1), -1))
+		W_mat = W_mat.view(-1, sub_emb.size(1), sub_emb.size(1))
+		W_mat = self.hidden_dropout1(W_mat)
+
+		x = torch.bmm(x, W_mat) 
+		x = x.view(-1, sub_emb.size(1))
+		x = self.bn2(x)
+		x = self.feature_drop(x)
 
 		x = torch.mm(x, all_ent.transpose(1,0))
 		x += self.bias.expand_as(x)
